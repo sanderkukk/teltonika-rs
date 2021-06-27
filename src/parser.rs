@@ -1,20 +1,16 @@
 extern crate nom;
+use crate::protocol::{AVLData, GPSElement, IoElement, IoElementValue, TeltonikaCodec8};
 use core::str;
 use crc::{Crc, CRC_16_ARC};
 use nom::{
     bytes::complete::{tag, take},
     character::complete::digit1,
     combinator::{map_res, peek},
-    error::ErrorKind,
     multi::count,
     number::complete::{be_u16, be_u32, be_u64, be_u8},
-    Err, IResult,
+    IResult,
 };
 use std::usize;
-
-use crate::protocol::{AVLData, GPSElement, IoElement, IoElementValue, TeltonikaCodec8};
-
-pub const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_ARC);
 
 fn parse_imei(input: &[u8]) -> IResult<&[u8], &str> {
     map_res(digit1, str::from_utf8)(input)
@@ -28,7 +24,7 @@ pub fn get_imei(input: &[u8]) -> IResult<&[u8], &str> {
 }
 
 fn calculate_crc(avl_data: &[u8]) -> u16 {
-    X25.checksum(avl_data)
+    Crc::<u16>::new(&CRC_16_ARC).checksum(avl_data)
 }
 
 fn get_1_byte_io_element(input: &[u8]) -> IResult<&[u8], IoElementValue> {
@@ -172,10 +168,9 @@ pub fn parse_teltonika_codec_8(input: &[u8]) -> IResult<&[u8], TeltonikaCodec8> 
     let (input, _number_of_data_2) = be_u8(input)?;
     let (input, crc) = be_u32(input)?;
 
-    println!("calculated {:?}", calculated_crc);
-    println!("crc : {:?}", crc);
-
-    if calculated_crc as u32 != crc {}
+    if calculated_crc as u32 != crc {
+        panic!("crc no match");
+    }
 
     Ok((
         input,
@@ -197,11 +192,201 @@ fn test_imei_parse() {
 }
 
 #[test]
-fn test_data_parse() {
-    // let input = "0000000000000036080400000113fc208dff000f14f650209cca80006f00d60400040004030101150316030001460000015d0000000113fc17610b000f14ffe0209cc580006e00c00500010004030101150316010001460000015e0000000113fc284945000f150f00209cd200009501080400000004030101150016030001460000015d0000000113fc267c5b000f150a50209cccc0009300680400000004030101150016030001460000015b00040000C7CF";
-    // let input2 = "000000000000002808010000016B40D9AD80010000000000000000000000000000000103021503010101425E100000010000F22A";
+fn test_data_parse_1() {
     let input3 = "000000000000003608010000016B40D8EA30010000000000000000000000000000000105021503010101425E0F01F10000601A014E0000000000000000010000C7CF";
-    let decoded = hex::decode(input3).expect("Decoding failed");
+    let decoded = hex::decode(input3).unwrap();
+    let parsed_data = parse_teltonika_codec_8(&decoded).unwrap().1;
+    assert_eq!(
+        parsed_data,
+        TeltonikaCodec8 {
+            data_length: 54,
+            codec_id: 8,
+            number_of_data: 1,
+            avl_data: [AVLData {
+                timestamp: 1560161086000,
+                priority: 1,
+                gps: GPSElement {
+                    longitude: 0.0,
+                    latitude: 0.0,
+                    altitude: 0,
+                    angle: 0,
+                    visible_satellites: 0,
+                    speed: 0
+                },
+                io: IoElement {
+                    event_io_id: 1,
+                    number_of_total_io: 5,
+                    number_of_1_byte_elements: 2,
+                    io_1_byte_elements: Some(
+                        [
+                            IoElementValue { id: 21, value: 3 },
+                            IoElementValue { id: 1, value: 1 }
+                        ]
+                        .to_vec()
+                    ),
+                    number_of_2_byte_elements: 1,
+                    io_2_byte_elements: Some(
+                        [IoElementValue {
+                            id: 66,
+                            value: 24079
+                        }]
+                        .to_vec()
+                    ),
+                    number_of_4_byte_elements: 1,
+                    io_4_byte_elements: Some(
+                        [IoElementValue {
+                            id: 241,
+                            value: 24602
+                        }]
+                        .to_vec()
+                    ),
+                    number_of_8_byte_elements: 1,
+                    io_8_byte_elements: Some([IoElementValue { id: 78, value: 0 }].to_vec())
+                }
+            }]
+            .to_vec()
+        }
+    )
+}
 
-    println!("decoded{:?}", parse_teltonika_codec_8(&decoded));
+#[test]
+fn test_data_parse_2() {
+    let input3 = "0000000000000036080400000113fc208dff000f14f650209cca80006f00d60400040004030101150316030001460000015d0000000113fc17610b000f14ffe0209cc580006e00c00500010004030101150316010001460000015e0000000113fc284945000f150f00209cd200009501080400000004030101150016030001460000015d0000000113fc267c5b000f150a50209cccc0009300680400000004030101150016030001460000015b00040000F991";
+    let decoded = hex::decode(input3).unwrap();
+    let parsed_data = parse_teltonika_codec_8(&decoded).unwrap().1;
+    assert_eq!(
+        parsed_data,
+        TeltonikaCodec8 {
+            data_length: 54,
+            codec_id: 8,
+            number_of_data: 4,
+            avl_data: [
+                AVLData {
+                    timestamp: 1185345998335,
+                    priority: 0,
+                    gps: GPSElement {
+                        longitude: 25.3032016,
+                        latitude: 54.7146368,
+                        altitude: 111,
+                        angle: 214,
+                        visible_satellites: 4,
+                        speed: 4
+                    },
+                    io: IoElement {
+                        event_io_id: 0,
+                        number_of_total_io: 4,
+                        number_of_1_byte_elements: 3,
+                        io_1_byte_elements: Some(
+                            [
+                                IoElementValue { id: 1, value: 1 },
+                                IoElementValue { id: 21, value: 3 },
+                                IoElementValue { id: 22, value: 3 }
+                            ]
+                            .to_vec()
+                        ),
+                        number_of_2_byte_elements: 0,
+                        io_2_byte_elements: Some([].to_vec()),
+                        number_of_4_byte_elements: 1,
+                        io_4_byte_elements: Some([IoElementValue { id: 70, value: 349 }].to_vec()),
+                        number_of_8_byte_elements: 0,
+                        io_8_byte_elements: Some([].to_vec())
+                    }
+                },
+                AVLData {
+                    timestamp: 1185345397003,
+                    priority: 0,
+                    gps: GPSElement {
+                        longitude: 25.3034464,
+                        latitude: 54.7145088,
+                        altitude: 110,
+                        angle: 192,
+                        visible_satellites: 5,
+                        speed: 1
+                    },
+                    io: IoElement {
+                        event_io_id: 0,
+                        number_of_total_io: 4,
+                        number_of_1_byte_elements: 3,
+                        io_1_byte_elements: Some(
+                            [
+                                IoElementValue { id: 1, value: 1 },
+                                IoElementValue { id: 21, value: 3 },
+                                IoElementValue { id: 22, value: 1 }
+                            ]
+                            .to_vec()
+                        ),
+                        number_of_2_byte_elements: 0,
+                        io_2_byte_elements: Some([].to_vec()),
+                        number_of_4_byte_elements: 1,
+                        io_4_byte_elements: Some([IoElementValue { id: 70, value: 350 }].to_vec()),
+                        number_of_8_byte_elements: 0,
+                        io_8_byte_elements: Some([].to_vec())
+                    }
+                },
+                AVLData {
+                    timestamp: 1185346505029,
+                    priority: 0,
+                    gps: GPSElement {
+                        longitude: 25.3038336,
+                        latitude: 54.7148288,
+                        altitude: 149,
+                        angle: 264,
+                        visible_satellites: 4,
+                        speed: 0
+                    },
+                    io: IoElement {
+                        event_io_id: 0,
+                        number_of_total_io: 4,
+                        number_of_1_byte_elements: 3,
+                        io_1_byte_elements: Some(
+                            [
+                                IoElementValue { id: 1, value: 1 },
+                                IoElementValue { id: 21, value: 0 },
+                                IoElementValue { id: 22, value: 3 }
+                            ]
+                            .to_vec()
+                        ),
+                        number_of_2_byte_elements: 0,
+                        io_2_byte_elements: Some([].to_vec()),
+                        number_of_4_byte_elements: 1,
+                        io_4_byte_elements: Some([IoElementValue { id: 70, value: 349 }].to_vec()),
+                        number_of_8_byte_elements: 0,
+                        io_8_byte_elements: Some([].to_vec())
+                    }
+                },
+                AVLData {
+                    timestamp: 1185346387035,
+                    priority: 0,
+                    gps: GPSElement {
+                        longitude: 25.3037136,
+                        latitude: 54.7146944,
+                        altitude: 147,
+                        angle: 104,
+                        visible_satellites: 4,
+                        speed: 0
+                    },
+                    io: IoElement {
+                        event_io_id: 0,
+                        number_of_total_io: 4,
+                        number_of_1_byte_elements: 3,
+                        io_1_byte_elements: Some(
+                            [
+                                IoElementValue { id: 1, value: 1 },
+                                IoElementValue { id: 21, value: 0 },
+                                IoElementValue { id: 22, value: 3 }
+                            ]
+                            .to_vec()
+                        ),
+                        number_of_2_byte_elements: 0,
+                        io_2_byte_elements: Some([].to_vec()),
+                        number_of_4_byte_elements: 1,
+                        io_4_byte_elements: Some([IoElementValue { id: 70, value: 347 }].to_vec()),
+                        number_of_8_byte_elements: 0,
+                        io_8_byte_elements: Some([].to_vec())
+                    }
+                }
+            ]
+            .to_vec()
+        }
+    )
 }

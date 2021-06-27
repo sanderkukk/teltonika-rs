@@ -1,6 +1,4 @@
-use std::u32;
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TeltonikaCodec8 {
     pub data_length: u32,
     pub codec_id: u8,
@@ -8,7 +6,7 @@ pub struct TeltonikaCodec8 {
     pub avl_data: Vec<AVLData>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AVLData {
     pub timestamp: u64,
     pub priority: u8,
@@ -16,7 +14,7 @@ pub struct AVLData {
     pub io: IoElement,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GPSElement {
     pub longitude: f64,
     pub latitude: f64,
@@ -26,12 +24,12 @@ pub struct GPSElement {
     pub speed: u16,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IoElementValue {
     pub id: u8,
     pub value: u64,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IoElement {
     pub event_io_id: u8,
     pub number_of_total_io: u8,
