@@ -12,13 +12,13 @@ use nom::{
 };
 use std::usize;
 
-fn parse_imei(input: &[u8]) -> IResult<&[u8], &str> {
+fn get_imei(input: &[u8]) -> IResult<&[u8], &str> {
     map_res(digit1, str::from_utf8)(input)
 }
 
-pub fn get_imei(input: &[u8]) -> IResult<&[u8], &str> {
+pub fn parse_teltonika_imei(input: &[u8]) -> IResult<&[u8], &str> {
     let (input, _) = tag(&[0, 15])(input)?;
-    let (input, parsed_imei) = parse_imei(input)?;
+    let (input, parsed_imei) = get_imei(input)?;
 
     Ok((input, parsed_imei))
 }
@@ -188,7 +188,10 @@ fn test_imei_parse() {
     let sample_imei = [
         0, 15, 51, 53, 54, 51, 48, 55, 48, 52, 50, 52, 52, 49, 48, 49, 51,
     ];
-    assert_eq!(get_imei(&sample_imei).unwrap().1, "356307042441013")
+    assert_eq!(
+        parse_teltonika_imei(&sample_imei).unwrap().1,
+        "356307042441013"
+    )
 }
 
 #[test]
