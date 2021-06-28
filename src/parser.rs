@@ -169,7 +169,7 @@ pub fn parse_teltonika_codec_8(input: &[u8]) -> IResult<&[u8], TeltonikaCodec8> 
     let (input, crc) = be_u32(input)?;
 
     if calculated_crc as u32 != crc {
-        panic!("crc no match");
+        println!("crc no match");
     }
 
     Ok((
