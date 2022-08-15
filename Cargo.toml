@@ -1,7 +1,13 @@
 [package]
 name = "teltonika-rs"
 version = "0.1.0"
+authors= ["Sander Kukk >sander@kukk.org>"]
 edition = "2018"
+description = "A nom library to decode proprietary Teltonika GPS messages"
+license = "MIT"
+repository = "https://github.com/sanderkukk/teltonika-rs"
+readme = "README.md"
+keywords = ["teltonika", "codec8"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
